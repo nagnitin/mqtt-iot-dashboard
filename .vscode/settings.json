@@ -1,0 +1,8 @@
+{
+  "C_Cpp.default.configurationProvider": "ms-vscode.vscode-arduino",
+  "arduino.defaultBaudRate": 115200,
+  "arduino.logLevel": "info",
+  "files.associations": {
+    "*.ino": "cpp"
+  }
+}

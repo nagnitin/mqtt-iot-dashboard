@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MQTT IoT Dashboard</title>
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <!-- Paho MQTT (WebSockets). Use providers that don't require Cloudflare Access; fall back if the first is blocked. -->
+    <script src="https://unpkg.com/paho-mqtt@1.1.0/mqttws31.min.js" crossorigin="anonymous"></script>
+    <script>
+      if (!(window.Paho && window.Paho.MQTT)) {
+        var s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/paho-mqtt@1.1.0/mqttws31.min.js';
+        s.crossOrigin = 'anonymous';
+        document.head.appendChild(s);
+      }
+    </script>
+    <!-- Chart.js for graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="brand">
+        <span class="logo">🔥</span>
+        <h1>Gas monitor</h1>
+      </div>
+      <div class="connection">
+        <label>
+          Host
+          <input id="host" type="text" value="10.211.141.246" />
+        </label>
+        <label>
+          WS Port
+          <input id="port" type="number" value="9001" />
+        </label>
+        <button id="connectBtn" class="btn-primary"><span class="material-symbols-rounded">login</span>Connect</button>
+        <button id="disconnectBtn" class="btn-ghost" disabled><span class="material-symbols-rounded">logout</span>Disconnect</button>
+        <span id="connStatus" class="badge">Disconnected</span>
+      </div>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="dashboard"><span class="material-symbols-rounded">dashboard</span>Dashboard</button>
+      <button class="tab" data-tab="servo"><span class="material-symbols-rounded">tune</span>Servo</button>
+      <button class="tab" data-tab="mode"><span class="material-symbols-rounded">toggle_on</span>Mode</button>
+      <button class="tab" data-tab="recipe"><span class="material-symbols-rounded">list_alt</span>Recipe</button>
+    </nav>
+
+    <main>
+      <!-- Dashboard Screen -->
+      <section id="dashboard" class="tab-panel active">
+        <div class="grid">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title"><span class="material-symbols-rounded icon">tune</span><h3>Servo</h3></div>
+              <div class="stat"><span id="servoAngleLabel">0</span><span class="unit">°</span></div>
+            </div>
+            <input id="servoSliderMirror" type="range" min="0" max="140" step="1" value="0" disabled />
+            <div class="range-meta"><span>0°</span><span>70°</span><span>140°</span></div>
+            <div class="timestamps">
+              <div>↑ <span id="servoSentTs">--</span></div>
+              <div>↓ <span id="servoRecvTs">--</span></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title"><span class="material-symbols-rounded icon">toggle_on</span><h3>Mode</h3></div>
+              <div class="row">
+                <span id="modeStatus" class="chip chip-muted">Manual</span>
+                <label class="switch">
+                  <input id="modeToggleMirror" type="checkbox" disabled />
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+            <div class="timestamps">
+              <div>↑ <span id="modeSentTs">--</span></div>
+              <div>↓ <span id="modeRecvTs">--</span></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title"><span class="material-symbols-rounded icon">notifications</span><h3>Alerts</h3></div>
+            </div>
+            <ul id="alertsList" class="list alerts"></ul>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title"><span class="material-symbols-rounded icon">list_alt</span><h3>Recipe</h3></div>
+              <span id="recipeActive" class="chip chip-muted">-</span>
+            </div>
+            <div class="timestamps">
+              <div>↑ <span id="recipeSentTs">--</span></div>
+              <div>↓ <span id="recipeRecvTs">--</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="charts">
+          <div class="card">
+            <div class="card-header">
+              <h3>Air quality</h3>
+            </div>
+            <canvas id="gasChart"></canvas>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3>Flame temperature</h3>
+            </div>
+            <canvas id="tempChart"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- Servo Screen -->
+      <section id="servo" class="tab-panel">
+          <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="material-symbols-rounded icon">tune</span><h3>Servo control</h3></div>
+            <div class="stat"><span id="servoAngleOut">0</span><span class="unit">°</span></div>
+          </div>
+          <input id="servoSlider" type="range" min="0" max="140" step="1" value="0" disabled />
+          <div class="range-meta"><span>0°</span><span>70°</span><span>140°</span></div>
+          <div class="row">
+            <button id="servoSendBtn" class="btn-primary" disabled><span class="material-symbols-rounded">send</span>Send</button>
+            <label><input id="servoLive" type="checkbox" disabled /> Live publish while dragging</label>
+          </div>
+        </div>
+      </section>
+
+      <!-- Mode Screen -->
+      <section id="mode" class="tab-panel">
+        <div class="card">
+          <div class="card-header">
+            <h3>Mode</h3>
+            <label class="switch">
+              <input id="modeToggle" type="checkbox" disabled />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <p>On = Recipe mode (will run the selected recipe). Off = Manual mode (servo uses slider value).</p>
+        </div>
+      </section>
+
+      <!-- Recipe Screen -->
+      <section id="recipe" class="tab-panel">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="material-symbols-rounded icon">list_alt</span><h3>Recipe</h3></div>
+            <span id="recipeActive" class="chip chip-muted">-</span>
+          </div>
+          <div class="list">
+            <label><input type="radio" name="recipe" value="1" checked disabled /> recipe 1</label>
+            <label><input type="radio" name="recipe" value="2" disabled /> recipe 2</label>
+            <label><input type="radio" name="recipe" value="3" disabled /> recipe 3</label>
+          </div>
+          <div class="row">
+            <button id="recipeSendBtn" class="btn-primary" disabled><span class="material-symbols-rounded">send</span>Send</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="material-symbols-rounded icon">auto_awesome</span><h3>AI Recipe Generator</h3></div>
+          </div>
+          <div class="grid two">
+            <label class="stack">
+              <span class="label">Gemini API Key</span>
+              <input id="aiKey" type="password" value="" />
+            </label>
+            <label class="stack">
+              <span class="label">Max angle (°)</span>
+              <input id="aiMaxAngle" type="number" value="140" min="0" max="180" />
+            </label>
+          </div>
+          <label class="stack">
+            <span class="label">Prompt</span>
+            <textarea id="aiPrompt" rows="4" placeholder="Describe the sequence you want (e.g., sweep slowly to 140°, pause, return to 90°, etc.)"></textarea>
+          </label>
+          <div class="row">
+            <button id="aiGenerateBtn" class="btn-primary"><span class="material-symbols-rounded">sparkles</span>Generate</button>
+            <button id="aiApplyBtn" class="btn-ghost" disabled><span class="material-symbols-rounded">play_arrow</span>Apply & Run</button>
+          </div>
+          <pre id="aiOutput" class="mono muted" style="white-space:pre-wrap; overflow:auto; max-height:180px; margin-top:10px;">Output will appear here…</pre>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>Topics:</span>
+      <code>mobile/angle</code>
+      <code>mobile/mode</code>
+      <code>mobile/recipe</code>
+      <code>arduino/to/pi</code>
+      <code>arduino/alert</code>
+      <code>alert</code>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+  </html>
+
