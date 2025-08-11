@@ -47,6 +47,7 @@
       <button class="tab" data-tab="servo"><span class="material-symbols-rounded">tune</span>Servo</button>
       <button class="tab" data-tab="mode"><span class="material-symbols-rounded">toggle_on</span>Mode</button>
       <button class="tab" data-tab="recipe"><span class="material-symbols-rounded">list_alt</span>Recipe</button>
+      <button class="tab" data-tab="connection"><span class="material-symbols-rounded">settings_ethernet</span>Connection</button>
     </nav>
 
     <main>
@@ -172,10 +173,6 @@
           </div>
           <div class="grid two">
             <label class="stack">
-              <span class="label">Gemini API Key</span>
-              <input id="aiKey" type="password" value="" />
-            </label>
-            <label class="stack">
               <span class="label">Max angle (°)</span>
               <input id="aiMaxAngle" type="number" value="140" min="0" max="180" />
             </label>
@@ -189,6 +186,66 @@
             <button id="aiApplyBtn" class="btn-ghost" disabled><span class="material-symbols-rounded">play_arrow</span>Apply & Run</button>
           </div>
           <pre id="aiOutput" class="mono muted" style="white-space:pre-wrap; overflow:auto; max-height:180px; margin-top:10px;">Output will appear here…</pre>
+        </div>
+      </section>
+
+      <!-- Connection Screen -->
+      <section id="connection" class="tab-panel">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="material-symbols-rounded icon">router</span><h3>Edit Connection</h3></div>
+          </div>
+          <div class="grid two">
+            <label class="stack">
+              <span class="label">Connection name</span>
+              <input id="connName" placeholder="My Pi MQTT" />
+            </label>
+            <label class="stack">
+              <span class="label">Client ID</span>
+              <input id="connClientId" placeholder="MobileClient" />
+            </label>
+          </div>
+
+          <div class="grid three">
+            <label class="stack">
+              <span class="label">Broker address</span>
+              <input id="connHost" placeholder="192.168.1.50" />
+            </label>
+            <label class="stack">
+              <span class="label">Port (WebSocket)</span>
+              <input id="connPort" type="number" value="9001" />
+            </label>
+            <label class="stack">
+              <span class="label">Path</span>
+              <input id="connPath" placeholder="/mqtt" value="/mqtt" />
+            </label>
+          </div>
+
+          <div class="grid three">
+            <label class="stack">
+              <span class="label">Keep alive (s)</span>
+              <input id="connKeepAlive" type="number" value="60" />
+            </label>
+            <label class="stack">
+              <span class="label">Username (optional)</span>
+              <input id="connUsername" />
+            </label>
+            <label class="stack">
+              <span class="label">Password (optional)</span>
+              <input id="connPassword" type="password" />
+            </label>
+          </div>
+
+          <div class="row" style="margin: 8px 0 12px; gap: 18px;">
+            <label><input id="connCleanSession" type="checkbox" checked /> Clean session</label>
+            <label><input id="connUseTLS" type="checkbox" /> Use TLS (wss)</label>
+            <label><input id="connAuto" type="checkbox" /> Auto connect</label>
+          </div>
+
+          <div class="row">
+            <button id="connSaveBtn" class="btn-ghost"><span class="material-symbols-rounded">save</span>Save</button>
+            <button id="connConnectBtn" class="btn-primary"><span class="material-symbols-rounded">login</span>Connect</button>
+          </div>
         </div>
       </section>
     </main>

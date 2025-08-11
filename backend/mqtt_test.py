@@ -3,6 +3,12 @@ import threading
 import time
 import os
 import sys
+import json
+import re
+try:
+    import requests
+except Exception:
+    requests = None  # backend prompt will warn if requests is missing
 
 # === Global variables ===
 mode = 0
@@ -26,6 +32,7 @@ def on_connect(client, userdata, flags, rc):
     client.subscribe("mobile/recipe")
     client.subscribe("mobile/angle")
     client.subscribe("mobile/recipe_json")
+    client.subscribe("mobile/recipe_prompt")
     client.subscribe("alert")
 
 
@@ -67,6 +74,15 @@ def on_message(client, userdata, msg):
                 print(f"[UPDATED] recipe {slot} -> {recipes[slot - 1]}")
         except Exception as e:
             print(f"[ERROR] Bad recipe_json: {e}; payload={payload}")
+
+    elif topic == "mobile/recipe_prompt":
+        prompt = payload
+        print(f"[PROMPT] {prompt}")
+        recipe_obj = generate_recipe_with_gemini(prompt)
+        if recipe_obj:
+            client.publish("mobile/recipe_json", json.dumps(recipe_obj))
+        else:
+            client.publish("mobile/recipe_json", json.dumps({"error": "generation_failed"}))
 
     elif topic == "mobile/angle":
         try:
@@ -144,4 +160,48 @@ t2.start()
 
 t1.join()
 t2.join()
+
+# === AI Integration ===
+GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "")
+
+def generate_recipe_with_gemini(prompt: str):
+    if not GEMINI_KEY or not requests:
+        print("[GEMINI] Missing key or requests module; skip generation")
+        return None
+    url = (
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        "gemini-1.5-flash-latest:generateContent?key=" + GEMINI_KEY
+    )
+    body = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {
+                        "text": (
+                            "Return ONLY minified JSON: {\"angles\":[...],\"delays\":[...]}. "
+                            + str(prompt)
+                        )
+                    }
+                ],
+            }
+        ],
+        "generationConfig": {"temperature": 0.4, "maxOutputTokens": 256},
+    }
+    try:
+        resp = requests.post(url, json=body, timeout=30)
+        resp.raise_for_status()
+        data = resp.json()
+        text = (
+            data.get("candidates", [{}])[0]
+            .get("content", {})
+            .get("parts", [{}])[0]
+            .get("text", "")
+        )
+        m = re.search(r"```(?:json)?\n([\s\S]*?)\n```", text)
+        raw = m.group(1) if m else text
+        return json.loads(raw)
+    except Exception as e:
+        print(f"[GEMINI ERROR] {e}")
+        return None
 

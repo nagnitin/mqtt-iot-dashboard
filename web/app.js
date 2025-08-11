@@ -52,12 +52,26 @@ const els = {
   alertsList: document.getElementById('alertsList'),
 
   // AI Recipe Generator
-  aiKey: document.getElementById('aiKey'),
   aiMaxAngle: document.getElementById('aiMaxAngle'),
   aiPrompt: document.getElementById('aiPrompt'),
   aiGenerateBtn: document.getElementById('aiGenerateBtn'),
   aiApplyBtn: document.getElementById('aiApplyBtn'),
   aiOutput: document.getElementById('aiOutput'),
+
+  // Connection screen
+  connName: document.getElementById('connName'),
+  connClientId: document.getElementById('connClientId'),
+  connHost: document.getElementById('connHost'),
+  connPort: document.getElementById('connPort'),
+  connPath: document.getElementById('connPath'),
+  connKeepAlive: document.getElementById('connKeepAlive'),
+  connUsername: document.getElementById('connUsername'),
+  connPassword: document.getElementById('connPassword'),
+  connCleanSession: document.getElementById('connCleanSession'),
+  connUseTLS: document.getElementById('connUseTLS'),
+  connAuto: document.getElementById('connAuto'),
+  connSaveBtn: document.getElementById('connSaveBtn'),
+  connConnectBtn: document.getElementById('connConnectBtn'),
 };
 
 // Tab switching
@@ -94,11 +108,13 @@ function connect() {
   if (client) {
     try { client.disconnect(); } catch (_) {}
   }
-  const host = els.host.value.trim();
-  const port = Number(els.port.value);
-  const clientId = 'web_' + Math.random().toString(16).slice(2);
-  // Some bundles expose only Paho.MQTT.Client, so access via window.Paho
-  client = new window.Paho.MQTT.Client(host, Number(port), '/mqtt', clientId);
+  const saved = getConnSettings();
+  const host = saved.host || els.host.value.trim();
+  const port = Number(saved.port || els.port.value);
+  const path = saved.path || '/mqtt';
+  const clientId = (saved.clientId || ('web_' + Math.random().toString(16).slice(2)));
+  const useSSL = !!saved.useTLS;
+  client = new window.Paho.MQTT.Client(host, Number(port), path, clientId);
 
   client.onConnectionLost = (resp) => {
     setStatus('Disconnected', false);
@@ -112,7 +128,11 @@ function connect() {
 
   client.connect({
     timeout: 5,
-    useSSL: false,
+    useSSL,
+    keepAliveInterval: Number(saved.keepAlive || 60),
+    cleanSession: saved.cleanSession !== false,
+    userName: saved.username || undefined,
+    password: saved.password || undefined,
     onSuccess: () => {
       setStatus('Connected', true);
       els.connectBtn.disabled = true;
@@ -334,6 +354,58 @@ els.recipeSendBtn.addEventListener('click', () => {
 els.connectBtn.addEventListener('click', connect);
 els.disconnectBtn.addEventListener('click', disconnect);
 
+// Connection screen behavior
+function getConnSettings() {
+  try { return JSON.parse(localStorage.getItem('mqttConnFull') || '{}'); } catch (_) { return {}; }
+}
+function setConnSettings(obj) {
+  try { localStorage.setItem('mqttConnFull', JSON.stringify(obj)); } catch (_) {}
+}
+function hydrateConnForm() {
+  const s = getConnSettings();
+  if (s.name) els.connName.value = s.name;
+  if (s.clientId) els.connClientId.value = s.clientId;
+  if (s.host) els.connHost.value = s.host;
+  if (s.port) els.connPort.value = String(s.port);
+  if (s.path) els.connPath.value = s.path;
+  if (s.keepAlive) els.connKeepAlive.value = String(s.keepAlive);
+  if (s.username) els.connUsername.value = s.username;
+  if (s.password) els.connPassword.value = s.password;
+  els.connCleanSession.checked = s.cleanSession !== false;
+  els.connUseTLS.checked = !!s.useTLS;
+  els.connAuto.checked = !!s.auto;
+  // also reflect in header inputs
+  if (s.host) els.host.value = s.host;
+  if (s.port) els.port.value = String(s.port);
+}
+hydrateConnForm();
+
+els.connSaveBtn?.addEventListener('click', () => {
+  const obj = {
+    name: els.connName.value.trim() || 'My Pi MQTT',
+    clientId: els.connClientId.value.trim(),
+    host: els.connHost.value.trim(),
+    port: Number(els.connPort.value),
+    path: els.connPath.value.trim() || '/mqtt',
+    keepAlive: Number(els.connKeepAlive.value) || 60,
+    username: els.connUsername.value,
+    password: els.connPassword.value,
+    cleanSession: !!els.connCleanSession.checked,
+    useTLS: !!els.connUseTLS.checked,
+    auto: !!els.connAuto.checked,
+  };
+  setConnSettings(obj);
+  // mirror header quick inputs
+  els.host.value = obj.host;
+  els.port.value = String(obj.port);
+  setStatus('Saved connection', true);
+});
+
+els.connConnectBtn?.addEventListener('click', () => {
+  setConnSettings({ ...getConnSettings(), host: els.connHost.value.trim(), port: Number(els.connPort.value), path: els.connPath.value.trim(), clientId: els.connClientId.value.trim(), keepAlive: Number(els.connKeepAlive.value) || 60, username: els.connUsername.value, password: els.connPassword.value, cleanSession: !!els.connCleanSession.checked, useTLS: !!els.connUseTLS.checked, auto: !!els.connAuto.checked, name: els.connName.value.trim() });
+  connect();
+});
+
 // Initialize labels
 els.servoAngleOut.textContent = els.servoSlider.value;
 els.servoAngleLabel.textContent = '0';
@@ -364,22 +436,7 @@ function setInteractive(enabled) {
 })();
 
 // ===== AI Recipe Generator =====
-async function generateWithGemini(prompt, key) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${encodeURIComponent(key)}`;
-  const body = {
-    contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    generationConfig: { temperature: 0.4, maxOutputTokens: 512 },
-  };
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(`Gemini HTTP ${res.status}`);
-  const data = await res.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  return text;
-}
+// Frontend now delegates generation to backend via MQTT topic: mobile/recipe_prompt
 
 function extractJson(text) {
   if (!text) return null;
@@ -406,21 +463,17 @@ function validateRecipe(obj, maxAngle) {
 
 els.aiGenerateBtn?.addEventListener('click', async () => {
   try {
-    const key = els.aiKey.value.trim();
-    if (!key) throw new Error('Missing API key');
-    // Persist key
-    try { localStorage.setItem('geminiKey', key); } catch (_) {}
     const maxAngle = Number(els.aiMaxAngle.value) || 140;
     const userPrompt = els.aiPrompt.value.trim() || 'Generate a concise servo recipe.';
-    const sysPrompt = `You control a servo (0..${maxAngle} degrees). Return ONLY minified JSON with shape {"angles":[...],"delays":[...]}. Length 3-8. Delays are seconds. No extra text.`;
-    els.aiOutput.textContent = 'Generating…';
-    const text = await generateWithGemini(`${sysPrompt}\n\nUser request: ${userPrompt}`, key);
-    const parsed = extractJson(text);
-    const err = validateRecipe(parsed, maxAngle);
-    if (err) throw new Error(`Invalid recipe: ${err}\nRaw: ${text}`);
-    lastAiRecipe = parsed;
-    els.aiOutput.textContent = JSON.stringify(parsed, null, 2);
-    els.aiApplyBtn.disabled = false;
+    const sysPrompt = `You control a servo (0..${maxAngle} degrees). Produce JSON {"angles":[...],"delays":[...]}.`;
+    const full = `${sysPrompt}\n\nUser: ${userPrompt}`;
+    if (!client?.isConnected()) throw new Error('Not connected to MQTT');
+    // Send prompt to backend; backend will publish mobile/recipe_json when ready
+    publish('mobile/recipe_prompt', full);
+    els.aiOutput.textContent = 'Sent prompt to backend… waiting for recipe_json';
+    // Optimistically enable Apply when recipe_json arrives
+    lastAiRecipe = null;
+    els.aiApplyBtn.disabled = true;
   } catch (e) {
     els.aiOutput.textContent = `Error: ${e.message}`;
     els.aiApplyBtn.disabled = true;
@@ -440,11 +493,55 @@ els.aiApplyBtn?.addEventListener('click', () => {
   els.recipeSentTs.textContent = now();
 });
 
-// Restore saved Gemini key
-(() => {
-  try {
-    const k = localStorage.getItem('geminiKey');
-    if (k) els.aiKey.value = k;
-  } catch (_) {}
-})();
+// Listen for backend recipe_json and reflect in UI
+function handleMessage(message) {
+  const topic = message.destinationName;
+  const payload = message.payloadString;
+  if (topic === 'arduino/to/pi') {
+    try {
+      const data = JSON.parse(payload);
+      charts.pushPoint(data);
+      els.servoRecvTs.textContent = now();
+    } catch (e) {}
+    return;
+  }
+  if (topic === 'arduino/alert') { addAlert(payload); return; }
+  if (topic === 'alert') {
+    if (payload === '1') { addAlert('ALERT: Emergency detected'); controlsLockedByAlert = true; setInteractive(false); }
+    if (payload === '0') { controlsLockedByAlert = false; setInteractive(true); }
+    return;
+  }
+  if (topic === 'mobile/angle') {
+    const angle = Number(payload);
+    els.servoAngleLabel.textContent = angle.toFixed(0);
+    els.servoSliderMirror.value = angle;
+    els.servoRecvTs.textContent = now();
+  }
+  if (topic === 'mobile/mode') {
+    const val = Number(payload) === 1;
+    els.modeToggleMirror.checked = val; els.modeToggle.checked = val; els.modeStatus.textContent = val ? 'Recipe' : 'Manual'; els.modeRecvTs.textContent = now();
+  }
+  if (topic === 'mobile/recipe') {
+    const num = Number(payload);
+    if (!Number.isNaN(num)) { els.recipeActive.textContent = `recipe ${num}`; const radio = document.querySelector(`input[name="recipe"][value="${num}"]`); if (radio) radio.checked = true; els.recipeRecvTs.textContent = now(); }
+  }
+  if (topic === 'mobile/recipe_json') {
+    try {
+      const obj = JSON.parse(payload);
+      if (obj && !obj.error) {
+        const err = validateRecipe(obj, Number(els.aiMaxAngle.value) || 140);
+        if (!err) {
+          lastAiRecipe = obj;
+          els.aiOutput.textContent = JSON.stringify(obj, null, 2);
+          els.aiApplyBtn.disabled = false;
+        } else {
+          els.aiOutput.textContent = `Invalid recipe from backend: ${err}`;
+        }
+      } else {
+        els.aiOutput.textContent = 'Backend recipe generation failed';
+      }
+    } catch (_) {}
+    return;
+  }
+}
 
