@@ -405,6 +405,8 @@ els.connSaveBtn?.addEventListener('click', () => {
 });
 
 els.connConnectBtn?.addEventListener('click', () => {
+  // minor debounce to avoid long handler warnings
+  if (els.connConnectBtn._busy) return; els.connConnectBtn._busy = true; setTimeout(()=>{ els.connConnectBtn._busy = false; }, 250);
   setConnSettings({ ...getConnSettings(), host: els.connHost.value.trim(), port: Number(els.connPort.value), path: els.connPath.value.trim(), clientId: els.connClientId.value.trim(), keepAlive: Number(els.connKeepAlive.value) || 60, username: els.connUsername.value, password: els.connPassword.value, cleanSession: !!els.connCleanSession.checked, useTLS: !!els.connUseTLS.checked, protocol: els.connProtocol ? els.connProtocol.value : (els.connUseTLS.checked ? 'wss' : 'ws'), auto: !!els.connAuto.checked, name: els.connName.value.trim() });
   connect();
 });
