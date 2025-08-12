@@ -69,6 +69,7 @@ const els = {
   connPassword: document.getElementById('connPassword'),
   connCleanSession: document.getElementById('connCleanSession'),
   connUseTLS: document.getElementById('connUseTLS'),
+  connProtocol: document.getElementById('connProtocol'),
   connAuto: document.getElementById('connAuto'),
   connSaveBtn: document.getElementById('connSaveBtn'),
   connConnectBtn: document.getElementById('connConnectBtn'),
@@ -113,7 +114,7 @@ function connect() {
   const port = Number(saved.port || els.port.value);
   const path = saved.path || '/mqtt';
   const clientId = (saved.clientId || ('web_' + Math.random().toString(16).slice(2)));
-  const useSSL = !!saved.useTLS;
+  const useSSL = saved.protocol ? (saved.protocol === 'wss') : !!saved.useTLS;
   client = new window.Paho.MQTT.Client(host, Number(port), path, clientId);
 
   client.onConnectionLost = (resp) => {
@@ -372,7 +373,8 @@ function hydrateConnForm() {
   if (s.username) els.connUsername.value = s.username;
   if (s.password) els.connPassword.value = s.password;
   els.connCleanSession.checked = s.cleanSession !== false;
-  els.connUseTLS.checked = !!s.useTLS;
+  els.connUseTLS.checked = !!s.useTLS || s.protocol === 'wss';
+  if (els.connProtocol && s.protocol) els.connProtocol.value = s.protocol;
   els.connAuto.checked = !!s.auto;
   // also reflect in header inputs
   if (s.host) els.host.value = s.host;
@@ -391,6 +393,7 @@ els.connSaveBtn?.addEventListener('click', () => {
     username: els.connUsername.value,
     password: els.connPassword.value,
     cleanSession: !!els.connCleanSession.checked,
+    protocol: els.connProtocol ? els.connProtocol.value : (els.connUseTLS.checked ? 'wss' : 'ws'),
     useTLS: !!els.connUseTLS.checked,
     auto: !!els.connAuto.checked,
   };
@@ -402,7 +405,7 @@ els.connSaveBtn?.addEventListener('click', () => {
 });
 
 els.connConnectBtn?.addEventListener('click', () => {
-  setConnSettings({ ...getConnSettings(), host: els.connHost.value.trim(), port: Number(els.connPort.value), path: els.connPath.value.trim(), clientId: els.connClientId.value.trim(), keepAlive: Number(els.connKeepAlive.value) || 60, username: els.connUsername.value, password: els.connPassword.value, cleanSession: !!els.connCleanSession.checked, useTLS: !!els.connUseTLS.checked, auto: !!els.connAuto.checked, name: els.connName.value.trim() });
+  setConnSettings({ ...getConnSettings(), host: els.connHost.value.trim(), port: Number(els.connPort.value), path: els.connPath.value.trim(), clientId: els.connClientId.value.trim(), keepAlive: Number(els.connKeepAlive.value) || 60, username: els.connUsername.value, password: els.connPassword.value, cleanSession: !!els.connCleanSession.checked, useTLS: !!els.connUseTLS.checked, protocol: els.connProtocol ? els.connProtocol.value : (els.connUseTLS.checked ? 'wss' : 'ws'), auto: !!els.connAuto.checked, name: els.connName.value.trim() });
   connect();
 });
 
