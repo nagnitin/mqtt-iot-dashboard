@@ -5,7 +5,8 @@
 #if defined(ARDUINO_ARCH_AVR)
 #include <avr/wdt.h>
 #elif defined(ARDUINO_ARCH_RENESAS)
-#include "cmsis.h"
+// Some cores don't expose a cmsis.h include path; forward-declare the symbol
+extern "C" void NVIC_SystemReset(void);
 #endif
 
 const char* ssid = "Neo_Mallena_7";
