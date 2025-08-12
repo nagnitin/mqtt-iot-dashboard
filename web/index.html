@@ -8,14 +8,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
-    <!-- Paho MQTT (WebSockets). Use providers that don't require Cloudflare Access; fall back if the first is blocked. -->
-    <script src="https://unpkg.com/paho-mqtt@1.1.0/mqttws31.min.js" crossorigin="anonymous"></script>
+    <!-- Paho MQTT (WebSockets) - prefer local vendored copy; CDN fallback only if missing -->
+    <script src="libs/mqttws31.min.js"></script>
     <script>
       if (!(window.Paho && window.Paho.MQTT)) {
-        var s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/paho-mqtt@1.1.0/mqttws31.min.js';
-        s.crossOrigin = 'anonymous';
-        document.head.appendChild(s);
+        var cdn = document.createElement('script');
+        cdn.src = 'https://unpkg.com/paho-mqtt@1.1.0/mqttws31.min.js';
+        cdn.crossOrigin = 'anonymous';
+        cdn.onload = function() { if (!(window.Paho && window.Paho.MQTT)) { var cdn2 = document.createElement('script'); cdn2.src = 'https://cdn.jsdelivr.net/npm/paho-mqtt@1.1.0/mqttws31.min.js'; cdn2.crossOrigin = 'anonymous'; document.head.appendChild(cdn2); } };
+        document.head.appendChild(cdn);
       }
     </script>
     <!-- Chart.js for graphs -->
