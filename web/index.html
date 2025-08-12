@@ -8,17 +8,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
-    <!-- Paho MQTT (WebSockets) - prefer local vendored copy; CDN fallback only if missing -->
+    <!-- Paho MQTT (WebSockets) - load local vendored copy only (no CDN to avoid CORS/MIME issues) -->
     <script src="libs/mqttws31.min.js"></script>
-    <script>
-      if (!(window.Paho && window.Paho.MQTT)) {
-        var cdn = document.createElement('script');
-        cdn.src = 'https://unpkg.com/paho-mqtt@1.1.0/mqttws31.min.js';
-        cdn.crossOrigin = 'anonymous';
-        cdn.onload = function() { if (!(window.Paho && window.Paho.MQTT)) { var cdn2 = document.createElement('script'); cdn2.src = 'https://cdn.jsdelivr.net/npm/paho-mqtt@1.1.0/mqttws31.min.js'; cdn2.crossOrigin = 'anonymous'; document.head.appendChild(cdn2); } };
-        document.head.appendChild(cdn);
-      }
-    </script>
     <!-- Chart.js for graphs -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   </head>
@@ -118,6 +109,53 @@
             </div>
             <canvas id="tempChart"></canvas>
           </div>
+        </div>
+
+        <!-- Custom Dashboard (IoT MQTT Panel style) -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="material-symbols-rounded icon">dashboard_customize</span><h3>Custom Dashboard</h3></div>
+            <div class="row">
+              <button id="panelExportBtn" class="btn-ghost"><span class="material-symbols-rounded">ios_share</span>Export</button>
+              <button id="panelImportBtn" class="btn-ghost"><span class="material-symbols-rounded">download</span>Import</button>
+              <button id="panelAddToggle" class="btn-primary"><span class="material-symbols-rounded">add</span>Add Panel</button>
+            </div>
+          </div>
+          <div id="panelForm" class="panel-form" style="display:none;">
+            <div class="grid three">
+              <label class="stack"><span class="label">Type</span>
+                <select id="pfType">
+                  <option value="switch">Switch</option>
+                  <option value="slider">Slider</option>
+                  <option value="textlog">Text Log</option>
+                  <option value="chart">Chart</option>
+                </select>
+              </label>
+              <label class="stack"><span class="label">Title</span><input id="pfTitle" placeholder="Panel title"/></label>
+              <label class="stack"><span class="label">Color</span><input id="pfColor" type="color" value="#2dd4bf"/></label>
+            </div>
+            <div class="grid three">
+              <label class="stack"><span class="label">Publish topic</span><input id="pfPub" placeholder="mobile/angle"/></label>
+              <label class="stack"><span class="label">Subscribe topic</span><input id="pfSub" placeholder="arduino/to/pi"/></label>
+              <label class="stack"><span class="label">QoS</span><input id="pfQos" type="number" value="0" min="0" max="2"/></label>
+            </div>
+            <div class="grid three">
+              <label class="stack"><span class="label">Payload ON</span><input id="pfOn" placeholder="1"/></label>
+              <label class="stack"><span class="label">Payload OFF</span><input id="pfOff" placeholder="0"/></label>
+              <label class="stack"><span class="label">Retain</span><select id="pfRetain"><option value="false" selected>No</option><option value="true">Yes</option></select></label>
+            </div>
+            <div class="grid three">
+              <label class="stack"><span class="label">Min</span><input id="pfMin" type="number" value="0"/></label>
+              <label class="stack"><span class="label">Max</span><input id="pfMax" type="number" value="140"/></label>
+              <label class="stack"><span class="label">Step</span><input id="pfStep" type="number" value="1"/></label>
+            </div>
+            <div class="row">
+              <button id="panelAddBtn" class="btn-primary"><span class="material-symbols-rounded">add_circle</span>Create</button>
+              <button id="panelCancelBtn" class="btn-ghost"><span class="material-symbols-rounded">close</span>Cancel</button>
+            </div>
+          </div>
+          <div id="panelGrid" class="panel-grid"></div>
+          <textarea id="panelImportText" class="mono" rows="6" style="display:none; width:100%; margin-top:10px;" placeholder="Paste exported JSON here then click Import again"></textarea>
         </div>
       </section>
 
@@ -219,6 +257,18 @@
             <label class="stack">
               <span class="label">Path</span>
               <input id="connPath" placeholder="/mqtt" value="/mqtt" />
+            </label>
+          </div>
+
+          <div class="grid two" style="margin-top:8px;">
+            <label class="stack">
+              <span class="label">Network protocol</span>
+              <select id="connProtocol">
+                <option value="ws" selected>WebSocket (ws)</option>
+                <option value="wss">WebSocket-SSL (wss)</option>
+                <option value="tcp" disabled>TCP (not supported in browser)</option>
+                <option value="tcpssl" disabled>TCP-SSL (not supported in browser)</option>
+              </select>
             </label>
           </div>
 
