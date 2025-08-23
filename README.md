@@ -39,8 +39,16 @@ python3 backend/mqtt_test.py
 - Install libraries: WiFiS3, PubSubClient, Servo, MAX6675
 - Upload
 
-4) Open the Dashboard
-- Open `web/index.html` in a browser
+4) Run the Flask Web Server (Optional)
+- Install Flask: `pip install -r requirements.txt`
+- Run the server: `python app.py`
+- Access dashboard at: `http://localhost:5000`
+
+5) Open the Dashboard
+- Option A: Use Flask server (recommended)
+  - Open `http://localhost:5000` in a browser
+- Option B: Direct file access
+  - Open `web/index.html` in a browser
 - Host: your Pi IP (e.g., 192.168.1.50)
 - WS Port: 9001
 - Click Connect
