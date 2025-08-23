@@ -12,13 +12,21 @@
     <script src="{{ url_for('static', filename='libs/mqttws31.min.js') }}"></script>
     <!-- Chart.js for graphs -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <!-- Ensure MQTT library is loaded before app.js -->
+    <!-- MQTT library loading check -->
     <script>
-      if (typeof window.Paho === 'undefined') {
-        console.error('MQTT library failed to load');
-      } else {
-        console.log('MQTT library loaded successfully');
-      }
+      // Wait for the page to load completely
+      window.addEventListener('load', function() {
+        // Check if MQTT library is available
+        if (typeof window.Paho === 'undefined') {
+          console.error('MQTT library failed to load');
+        } else if (typeof window.Paho.MQTT === 'undefined') {
+          console.error('Paho.MQTT not available');
+        } else {
+          console.log('MQTT library loaded successfully');
+          // Signal that MQTT is ready
+          window.mqttReady = true;
+        }
+      });
     </script>
   </head>
   <body>
