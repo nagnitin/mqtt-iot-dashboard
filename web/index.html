@@ -12,6 +12,14 @@
     <script src="libs/mqttws31.min.js"></script>
     <!-- Chart.js for graphs -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <!-- Ensure MQTT library is loaded before app.js -->
+    <script>
+      if (typeof window.Paho === 'undefined') {
+        console.error('MQTT library failed to load');
+      } else {
+        console.log('MQTT library loaded successfully');
+      }
+    </script>
   </head>
   <body>
     <header class="app-header">

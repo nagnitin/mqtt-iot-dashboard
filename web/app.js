@@ -12,6 +12,16 @@
     - mobile/angle   : mirror angle updates
 */
 
+// Verify MQTT library is loaded
+if (typeof window.Paho === 'undefined') {
+  console.error('MQTT library not loaded. Check if libs/mqttws31.min.js is accessible.');
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof window.Paho === 'undefined') {
+      alert('MQTT client library failed to load. Please check the console for details.');
+    }
+  });
+}
+
 const els = {
   host: document.getElementById('host'),
   port: document.getElementById('port'),
@@ -102,8 +112,16 @@ function now() {
 }
 
 function connect() {
-  if (typeof window.Paho === 'undefined' || !window.Paho?.MQTT) {
-    alert('MQTT client library failed to load. Check internet connectivity/CDN.');
+  // Check if MQTT library is available
+  if (typeof window.Paho === 'undefined') {
+    alert('MQTT client library failed to load. Please refresh the page.');
+    console.error('Paho MQTT library not found');
+    return;
+  }
+  
+  if (!window.Paho.MQTT) {
+    alert('MQTT client library failed to load. Please refresh the page.');
+    console.error('Paho.MQTT not available');
     return;
   }
   if (client) {
