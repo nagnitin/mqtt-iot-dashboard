@@ -6,8 +6,8 @@ app = Flask(__name__, static_folder="web", template_folder="web")
 
 @app.route('/')
 def dashboard():
-    """Serve the main dashboard page"""
-    return send_from_directory('web', 'index.html')
+    """Serve the main dashboard page with Flask template processing"""
+    return render_template('index_flask.html')
 
 @app.route('/<path:filename>')
 def static_files(filename):
