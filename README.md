@@ -11,9 +11,11 @@ What you get
 - AI Recipe Generator (Gemini) that can update recipes on the fly
 
 Prerequisites
-- Raspberry Pi with Mosquitto broker
+- Raspberry Pi with Mosquitto broker (or Windows with Mosquitto)
 - Arduino UNO R4 WiFi
 - Browser with internet (for CDN); or host mqttws31 locally
+
+**For Windows users**: See [README_WINDOWS.md](README_WINDOWS.md) for detailed Windows setup instructions.
 
 1) Enable WebSockets on the Pi (Mosquitto)
 Create `/etc/mosquitto/conf.d/websockets.conf`:
