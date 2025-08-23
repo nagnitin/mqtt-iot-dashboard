@@ -40,13 +40,13 @@ python3 backend/mqtt_test.py
 - Upload
 
 4) Run the Flask Web Server (Optional)
-- Install Flask: `pip install -r requirements.txt`
+- Install dependencies: `pip install -r requirements.txt`
 - Run the server: `python app.py`
-- Access dashboard at: `http://localhost:8080`
+- Access dashboard at: `http://localhost:5001`
 
 5) Open the Dashboard
 - Option A: Use Flask server (recommended)
-  - Open `http://localhost:8080` in a browser
+  - Open `http://localhost:5001` in a browser
 - Option B: Direct file access
   - Open `web/index.html` in a browser
 - Host: your Pi IP (e.g., 192.168.1.50)
